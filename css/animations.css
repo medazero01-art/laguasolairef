@@ -1,0 +1,131 @@
+/* ============================================================
+   LAGUA Solaire — animations.css
+   Keyframes, transitions, and scroll-driven classes.
+   ============================================================ */
+
+/* ── Scroll Reveal (hidden→visible) ───────────────── */
+.anim-hidden {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+}
+
+.anim-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays applied via JS or nth-child */
+.anim-delay-1 { transition-delay: 120ms; }
+.anim-delay-2 { transition-delay: 240ms; }
+.anim-delay-3 { transition-delay: 360ms; }
+.anim-delay-4 { transition-delay: 480ms; }
+.anim-delay-5 { transition-delay: 600ms; }
+
+/* ── Hero Load Sequence ───────────────────────────── */
+.hero-load-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.hero-load-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+/* ── Chatbot Pulse ────────────────────────────────── */
+@keyframes chatbotPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(0, 229, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 229, 255, 0);
+  }
+}
+
+.chatbot__trigger--pulse {
+  animation: chatbotPulse 2s ease-out infinite;
+}
+
+/* ── Typing Indicator Dots ────────────────────────── */
+@keyframes typingDot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Marquee (Testimonials) ───────────────────────── */
+@keyframes marqueeLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marqueeRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee--left {
+  animation: marqueeLeft 40s linear infinite;
+}
+
+.marquee--right {
+  animation: marqueeRight 40s linear infinite;
+}
+
+/* ── Scroll Indicator Bounce ──────────────────────── */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+.hero__scroll-hint {
+  animation: scrollBounce 2s ease-in-out infinite;
+  animation-delay: 2.5s;
+}
+
+/* ── Chatbot Trigger Entry ────────────────────────── */
+.chatbot__trigger {
+  transform: scale(0);
+}
+
+.chatbot__trigger--entered {
+  transform: scale(1);
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Float animation for segment panels ───────────── */
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Gradient shift background ────────────────────── */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Reduced Motion ───────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .anim-hidden {
+    opacity: 1;
+    transform: none;
+  }
+}
