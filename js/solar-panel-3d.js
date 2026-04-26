@@ -89,7 +89,7 @@
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      const fitScale = 3.5 / maxDim; // Adjusted to fit perfectly without cropping
+      const fitScale = 3 / maxDim; // Adjusted to fit perfectly without cropping
       model.scale.setScalar(fitScale);
       
       const center = box.getCenter(new THREE.Vector3());
@@ -117,12 +117,13 @@
 
 
   // --- Mouse tracking ---
-  var baseRotX = Math.PI / 10; // ~18 degrees tilted back
-  var baseRotY = -Math.PI / 12; // ~-15 degrees tilted left
+  var baseRotX = Math.PI / -6;
+  var baseRotY = -Math.PI / 4;
+  var baseRotZ = -Math.PI / 2.3;
   var targetRotX = baseRotX, targetRotY = baseRotY;
   
   // Set initial orientation
-  panelGroup.rotation.set(baseRotX, baseRotY, 0);
+  panelGroup.rotation.set(baseRotX, baseRotY, baseRotZ);
 
   var isHovering = false;
   var maxRotH = Math.PI / 36; // ±5°
