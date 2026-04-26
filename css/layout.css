@@ -649,7 +649,7 @@
 
   .section-hero {
     padding: var(--space-xl) var(--space-md) var(--space-md);
-    min-height: auto;
+    min-height: 100vh;
     align-items: flex-start;
   }
 
@@ -678,7 +678,6 @@
 @media (max-width: 767px) {
   .section-hero { padding: calc(var(--space-xl) + 20px) var(--space-sm) var(--space-md); min-height: 100vh; }
   .hero__canvas-wrap { opacity: 0.4; }
-  .hero__h1-bg { display: none; }
   .about__stats { flex-direction: column; align-items: center; }
   .about__stat-number { font-size: 3rem; }
   .services__grid { grid-template-columns: 1fr; }

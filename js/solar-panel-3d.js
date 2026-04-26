@@ -20,11 +20,8 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.physicallyCorrectLights = true;
   container.appendChild(renderer.domElement);
 
   function resize() {
@@ -32,9 +29,23 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+
+    if (typeof panelGroup !== 'undefined') {
+      var screenW = window.innerWidth;
+      // La taille standard du design est d'environ 1200px
+      var scale = Math.min(1, screenW / 1200);
+      scale = Math.max(0.3, scale); // Limite abaissée à 0.3 pour les petits mobiles
+      panelGroup.scale.set(scale, scale, scale);
+    }
+
+    if (typeof wakeUpAnimation === 'function') {
+      wakeUpAnimation();
+    } else {
+      renderer.render(scene, camera);
+    }
   }
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize, { passive: true });
 
   // --- Lighting ---
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));
@@ -56,6 +67,7 @@
   // --- Panel group ---
   var panelGroup = new THREE.Group();
   scene.add(panelGroup);
+  resize(); // On appelle resize() pour appliquer l'échelle initiale
 
   // --- GLB Loading Logic ---
   // If the user places "model.glb" in the "assets/" folder, it will load.
@@ -80,6 +92,8 @@
         }
       });
       panelGroup.add(model);
+      
+      if (typeof wakeUpAnimation === 'function') wakeUpAnimation();
     },
     undefined,
     function (error) {
@@ -101,6 +115,15 @@
   var maxRotH = Math.PI / 36; // ±5°
   var maxRotV = Math.PI / 36; // ±5°
 
+  var isVisible = true;
+  var isAnimating = false;
+
+  function wakeUpAnimation() {
+    if (isVisible && !isAnimating) {
+      animate();
+    }
+  }
+
   if (!isMobile) {
     // We bind to document so mouse tracking works across the hero without being cut off
     document.addEventListener('mousemove', function (e) {
@@ -109,6 +132,7 @@
         targetRotX = baseRotX;
         targetRotY = baseRotY;
         isHovering = false;
+        wakeUpAnimation();
         return;
       }
       var nx = (e.clientX / window.innerWidth) * 2 - 1;
@@ -116,12 +140,27 @@
       targetRotY = baseRotY + nx * maxRotH;
       targetRotX = baseRotX + ny * maxRotV;
       isHovering = true;
-    });
+      wakeUpAnimation();
+    }, { passive: true });
+
     document.addEventListener('mouseleave', function () {
       targetRotX = baseRotX;
       targetRotY = baseRotY;
       isHovering = false;
-    });
+      wakeUpAnimation();
+    }, { passive: true });
+  }
+
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        isVisible = entry.isIntersecting;
+        if (isVisible) {
+          wakeUpAnimation();
+        }
+      });
+    }, { threshold: 0 });
+    observer.observe(container);
   }
 
   // --- Initialize Text Animations ---
@@ -157,28 +196,52 @@
 
   // --- Render loop ---
   function animate() {
-    requestAnimationFrame(animate);
+    if (!isVisible) {
+      isAnimating = false;
+      return; // Pause completely if off screen
+    }
+
+    isAnimating = true;
 
     if (!isHovering) {
       targetRotX = baseRotX;
       targetRotY = baseRotY;
     }
 
-    panelGroup.rotation.y += (targetRotY - panelGroup.rotation.y) * 0.05;
-    panelGroup.rotation.x += (targetRotX - panelGroup.rotation.x) * 0.05;
+    var dx = targetRotX - panelGroup.rotation.x;
+    var dy = targetRotY - panelGroup.rotation.y;
+    
+    // Check if lerp is converged
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      panelGroup.rotation.x = targetRotX;
+      panelGroup.rotation.y = targetRotY;
+      renderer.render(scene, camera); // Final perfect frame
+      isAnimating = false;
+      return; // Stop requesting frames
+    }
+
+    panelGroup.rotation.y += dy * 0.05;
+    panelGroup.rotation.x += dx * 0.05;
 
     renderer.render(scene, camera);
+    requestAnimationFrame(animate);
   }
 
   // --- Init ---
   renderer.domElement.style.opacity = '0';
   renderer.domElement.style.transition = 'opacity 0.8s ease';
 
-  window.addEventListener('DOMContentLoaded', function () {
+  function initScene() {
     renderer.domElement.style.opacity = '1';
     startDolly();
-    animate();
-  });
+    wakeUpAnimation();
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initScene);
+  } else {
+    initScene();
+  }
 
   // Expose for main.js scroll integration
   window.__solarPanel = { panelGroup: panelGroup };
