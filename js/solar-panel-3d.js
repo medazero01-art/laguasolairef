@@ -14,8 +14,9 @@
   // --- Scene setup ---
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-  camera.position.set(0, 1.5, 5.5); // slightly above and facing down
+  camera.position.set(0, 0, 6.5);
   camera.lookAt(0, 0, 0);
+  const clock = new THREE.Clock();
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -25,16 +26,19 @@
   container.appendChild(renderer.domElement);
 
   function resize() {
-    var w = container.clientWidth, h = container.clientHeight;
+    var w = container.offsetWidth, h = container.offsetHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
 
     if (typeof panelGroup !== 'undefined') {
       var screenW = window.innerWidth;
-      // La taille standard du design est d'environ 1200px
-      var scale = Math.min(1, screenW / 1200);
-      scale = Math.max(0.3, scale); // Limite abaissée à 0.3 pour les petits mobiles
+      var scale = 1.0;
+      if (screenW < 768) {
+        scale = 0.7; // Mobile: Reduce size significantly
+      } else if (screenW < 1200) {
+        scale = 0.85; // Tablet: Reduce model scale factor
+      }
       panelGroup.scale.set(scale, scale, scale);
     }
 
@@ -47,20 +51,24 @@
   resize();
   window.addEventListener('resize', resize, { passive: true });
 
-  // --- Lighting ---
-  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  // --- Cinematic Lighting ---
+  scene.add(new THREE.AmbientLight(0x0f1d2b, 1.5));
 
-  var dirLight = new THREE.DirectionalLight(0xffffff, 4.0);
-  dirLight.position.set(-5, 8, 4); // top-left
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-  dirLight.shadow.bias = -0.001;
-  scene.add(dirLight);
+  var sunLight = new THREE.DirectionalLight(0xfff5e6, 6.0);
+  sunLight.position.set(-8, 10, 8);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width = 2048;
+  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.bias = -0.0005;
+  scene.add(sunLight);
 
-  var fillLight = new THREE.PointLight(0xffffff, 1.5, 20);
-  fillLight.position.set(5, -2, 5); // opposite side
-  scene.add(fillLight);
+  var rimLight = new THREE.DirectionalLight(0x00e5ff, 4.0);
+  rimLight.position.set(10, 5, -10);
+  scene.add(rimLight);
+
+  var sweepLight = new THREE.PointLight(0x88ccff, 5.0, 15);
+  sweepLight.position.set(-5, 0, 3);
+  scene.add(sweepLight);
 
 
 
@@ -78,15 +86,20 @@
     function (gltf) {
       var model = gltf.scene;
       
-      // TAILLE : 0.7 (comme demandé)
-      model.scale.set(0.7, 0.7, 0.7); 
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fitScale = 3.5 / maxDim; // Adjusted to fit perfectly without cropping
+      model.scale.setScalar(fitScale);
       
-      // HAUTEUR : Modifiez la valeur Y ici pour monter ou descendre le modèle
-      model.position.y = -0.6; 
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center.multiplyScalar(fitScale));
       
       model.traverse(function (node) {
         if (node.isMesh && node.material) {
-          node.material.envMapIntensity = 1.2;
+          node.material.envMapIntensity = 3.0;
+          if (node.material.metalness !== undefined) node.material.metalness = Math.max(0.6, node.material.metalness);
+          if (node.material.roughness !== undefined) node.material.roughness = Math.min(0.2, node.material.roughness);
           node.castShadow = true;
           node.receiveShadow = true;
         }
@@ -171,8 +184,8 @@
 
   /** Trigger hero text stagger after dolly completes */
   function triggerHeroText() {
-    var ids = ['heroEyebrow', 'heroH1', 'heroBody', 'heroCtas'];
-    var delays = [0, 200, 600, 800];
+    var ids = ['heroH1', 'heroLeft'];
+    var delays = [0, 400];
     ids.forEach(function (id, i) {
       var el = document.getElementById(id);
       if (el) {
@@ -201,8 +214,6 @@
       return; // Pause completely if off screen
     }
 
-    isAnimating = true;
-
     if (!isHovering) {
       targetRotX = baseRotX;
       targetRotY = baseRotY;
@@ -211,14 +222,21 @@
     var dx = targetRotX - panelGroup.rotation.x;
     var dy = targetRotY - panelGroup.rotation.y;
     
-    // Check if lerp is converged
     if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      // Force exact target to avoid micro-jitter
       panelGroup.rotation.x = targetRotX;
       panelGroup.rotation.y = targetRotY;
-      renderer.render(scene, camera); // Final perfect frame
+      renderer.render(scene, camera); // One final render to lock it
       isAnimating = false;
-      return; // Stop requesting frames
+      return; // Stop the loop!
     }
+
+    isAnimating = true;
+
+    // Animate sweep light only when rendering
+    var time = clock.getElapsedTime();
+    sweepLight.position.x = Math.sin(time * 0.8) * 6;
+    sweepLight.position.y = Math.cos(time * 0.5) * 4;
 
     panelGroup.rotation.y += dy * 0.05;
     panelGroup.rotation.x += dx * 0.05;
